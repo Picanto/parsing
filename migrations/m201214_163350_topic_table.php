@@ -12,7 +12,14 @@ class m201214_163350_topic_table extends Migration
      */
     public function safeUp()
     {
-
+        $this->createTable('topic', [
+            'id' => $this->primaryKey(),
+            'title' => $this->string(), // Название статьи
+            'href' => $this->string(),  // Ссылка  на статью
+            'text' => $this->text(),    // Детальный текст статьи
+            'date' => $this->string(),  // Дата публикации статьи
+            'image' => $this->string()  // Сохранить в папку картинку (превью)
+        ]);
     }
 
     /**
@@ -20,9 +27,7 @@ class m201214_163350_topic_table extends Migration
      */
     public function safeDown()
     {
-        echo "m201214_163350_topic_table cannot be reverted.\n";
-
-        return false;
+        $this->dropTable('topic');
     }
 
     /*
