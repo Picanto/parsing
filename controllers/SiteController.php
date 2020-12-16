@@ -135,85 +135,93 @@ class SiteController extends Controller
         $html = file_get_html('https://gkb81.ru/sovety/');
         $h3 = $html->find('div.description h3');
 
-        //----------------------------------------------------------------------------------
-        for ($i = 0; $i < count($h3); $i++) {
-            $image = $html->find('img.size-post-thumbnail', $i)->src;
-            $imageBaseName = pathinfo($image);
-
-            $path = \Yii::getAlias('@runtime');
-            $file = $path . '/' . $imageBaseName['basename'];
-
-            $localImagePath = '/runtime/' . $imageBaseName['basename'];
-
-            $Headers = @get_headers($image);
-            if (preg_match("|200|", $Headers[0])) {
-                $image = file_get_contents($image);
-                file_put_contents($file, $image);
-
-                $item_arr_image[] = $localImagePath;
-            } else {
-                echo "File not Found";
-            }
-        }
-        //----------------------------------------------------------------------------------
-
-        $parser = new Parser();
-
-        foreach ($h3 as $h3_item) {
-            $item_arr_h3[] = array('h3' => $parser->stripTags($h3_item));
-        }
-
-        $h3_href = $html->find('a.header');
-        foreach ($h3_href as $a_href_link_item) {
-            $item_arr_href[] = array('href' => htmlspecialchars($a_href_link_item->href));
-        }
-
-        $h3_date = $html->find('div.description li.ltx-icon-date span.dt text');
-        foreach ($h3_date as $h3_date_item) {
-            $item_arr_date[] = array('date' => htmlspecialchars($h3_date_item));
-        }
-
-        // Открыть подстраницу статьи по полученной ссылке с главной странице
-        for ($i = 0; $i < count($item_arr_href); $i++) {
-
-            $html = file_get_html($item_arr_href[$i]['href']);
-            $text = $html->find('div.text');
-
-            foreach ($text as $text_item) {
-                $item_arr_text[] = array('text' => $text_item);
-            }
-        }
-
-        $item_arr = [
-            'h3' => $item_arr_h3,
-            'href' => $item_arr_href,
-            'date' => $item_arr_date,
-            'image' => $item_arr_image,
-            'text' => $item_arr_text
-        ];
-
-        unset($parser);
-
         for ($i = 0; $i < count($h3); $i++) {
 
             $parser = new Parser();
 
-            $title = implode('', $item_arr['h3'][$i]);
-            $href = implode('', $item_arr['href'][$i]);
-            $date = implode('', $item_arr['date'][$i]);
-            $image = $item_arr['image'][$i];
-            $text = implode($item_arr['text'][$i]);
+            $customer = Parser::find()
+                ->where(['title' => $parser->stripTags($h3[$i])])
+                ->one();
 
-            $parser->title = $title;
-            $parser->href = $href;
-            $parser->text = $text;
-            $parser->date = $date;
-            $parser->image = $image;
+            // если статьи нет, то парсим её
+            if (is_null($customer)) {
 
-            $parser->save();
+                // загрузка картинки -->
+                for ($i = 0; $i < count($h3); $i++) {
+                    $image = $html->find('img.size-post-thumbnail', $i)->src;
+                    $imageBaseName = pathinfo($image);
+
+                    $path = \Yii::getAlias('@runtime');
+                    $file = $path . '/' . $imageBaseName['basename'];
+
+                    $localImagePath = '/runtime/' . $imageBaseName['basename'];
+
+                    $Headers = @get_headers($image);
+                    if (preg_match("|200|", $Headers[0])) {
+                        $image = file_get_contents($image);
+                        file_put_contents($file, $image);
+
+                        $item_arr_image[] = $localImagePath;
+                    } else {
+                        echo "File not Found";
+                    }
+                }
+                // загрузка картинки <--
+
+                foreach ($h3 as $h3_item) {
+                    $item_arr_h3[] = array('h3' => $parser->stripTags($h3_item));
+                }
+
+                $h3_href = $html->find('a.header');
+                foreach ($h3_href as $a_href_link_item) {
+                    $item_arr_href[] = array('href' => htmlspecialchars($a_href_link_item->href));
+                }
+
+                $h3_date = $html->find('div.description li.ltx-icon-date span.dt text');
+                foreach ($h3_date as $h3_date_item) {
+                    $item_arr_date[] = array('date' => htmlspecialchars($h3_date_item));
+                }
+
+                // Открыть подстраницу статьи по полученной ссылке с главной странице
+                for ($i = 0; $i < count($item_arr_href); $i++) {
+
+                    $html = file_get_html($item_arr_href[$i]['href']);
+                    $text = $html->find('div.text');
+
+                    foreach ($text as $text_item) {
+                        $item_arr_text[] = array('text' => $text_item);
+                    }
+                }
+
+                $item_arr = [
+                    'h3' => $item_arr_h3,
+                    'href' => $item_arr_href,
+                    'date' => $item_arr_date,
+                    'image' => $item_arr_image,
+                    'text' => $item_arr_text
+                ];
+
+                for ($i = 0; $i < count($h3); $i++) {
+
+                    $parser = new Parser();
+
+                    $title = implode('', $item_arr['h3'][$i]);
+                    $href = implode('', $item_arr['href'][$i]);
+                    $date = implode('', $item_arr['date'][$i]);
+                    $image = $item_arr['image'][$i];
+                    $text = implode($item_arr['text'][$i]);
+
+                    $parser->title = $title;
+                    $parser->href = $href;
+                    $parser->text = $text;
+                    $parser->date = $date;
+                    $parser->image = $image;
+
+                    $parser->save();
+                }
+                echo '<br>Картинки сохранены в ' . \Yii::getAlias('@runtime');
+            }
+            unset($parser);
         }
-
-        unset($parser);
-        echo '<br>Картинки сохранены в ' . \Yii::getAlias('@runtime');
     }
 }
